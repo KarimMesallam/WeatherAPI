@@ -61,8 +61,9 @@ TZ_OFFSET_MINUTES = 120
 HTTP_TIMEOUT_SECONDS = 30
 
 # Tide model configuration
-# Options: "GOT4.10" (default, works but low resolution) or "FES2022" (better resolution)
-TIDE_MODEL_NAME = os.environ.get("TIDE_MODEL", "GOT4.10")
+# Options: "FES2022" (default, high resolution) or "GOT4.10" (fallback, lower resolution)
+# Override at runtime: TIDE_MODEL=GOT4.10 to switch back
+TIDE_MODEL_NAME = os.environ.get("TIDE_MODEL", "FES2022")
 
 # Datum offset: Models output relative to MSL, but tide tables use chart datum
 # (Lowest Astronomical Tide). For Dahab, the offset is ~45cm based on comparison

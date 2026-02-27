@@ -79,11 +79,11 @@ def compute_tides_fes2022() -> Optional[List[int]]:
         t = np.array([base_days + i / 24.0 for i in range(n)])
 
         # Convert amplitude/phase to complex harmonic constants
-        # hc = amp * exp(i * phase_radians)
+        # Must use -1j to match pyTMD's internal convention (see compute_tide_corrections)
         # Shape must be (npts, nconstituents) - we have n time points, 1 spatial point
         # pyTMD expects masked arrays
         ph_rad = np.deg2rad(ph)
-        hc_single = amp * np.exp(1j * ph_rad)  # (nconstituents,)
+        hc_single = amp * np.exp(-1j * ph_rad)  # (nconstituents,)
         hc = np.ma.array(np.tile(hc_single, (n, 1)))  # (n, nconstituents) as masked array
         hc.mask = np.zeros_like(hc, dtype=bool)  # No masked values
 
