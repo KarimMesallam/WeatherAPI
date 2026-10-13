@@ -49,6 +49,42 @@ def _load_constants():
     return _cached_constants
 
 
+# pyTMD.predict.drift measures time in days since this epoch (1992-01-01 UTC)
+PYTMD_EPOCH_UNIX = 694224000
+
+
+def predict_tide_m(epochs: np.ndarray) -> np.ndarray:
+    """Predict tide heights in metres relative to MSL at Unix epoch seconds.
+
+    Raises RuntimeError when the FES2022 constants file is missing.
+    """
+    import pyTMD.predict
+
+    constants = _load_constants()
+    if constants is None:
+        raise RuntimeError("FES2022 constants not available")
+
+    constituents = constants['constituents']
+    amp = np.array(constants['amplitude'])  # meters
+    ph = np.array(constants['phase'])       # degrees
+
+    t = (np.asarray(epochs, dtype=float) - PYTMD_EPOCH_UNIX) / 86400.0
+    n = len(t)
+
+    # Convert amplitude/phase to complex harmonic constants
+    # Must use -1j to match pyTMD's internal convention (see compute_tide_corrections)
+    # Shape must be (npts, nconstituents) - we have n time points, 1 spatial point
+    # pyTMD expects masked arrays
+    ph_rad = np.deg2rad(ph)
+    hc_single = amp * np.exp(-1j * ph_rad)  # (nconstituents,)
+    hc = np.ma.array(np.tile(hc_single, (n, 1)))  # (n, nconstituents) as masked array
+    hc.mask = np.zeros_like(hc, dtype=bool)  # No masked values
+
+    return np.asarray(
+        pyTMD.predict.drift(t, hc, constituents, deltat=0.0, corrections='FES')
+    )
+
+
 def compute_tides_fes2022() -> Optional[Tuple[List[int], int]]:
     """Compute hourly tide heights using FES2022 cached constants.
 
@@ -58,47 +94,12 @@ def compute_tides_fes2022() -> Optional[Tuple[List[int], int]]:
     Uses pre-extracted harmonic constants for fast computation.
     """
     try:
-        import pyTMD.arguments
-        import pyTMD.predict
-
-        # Load cached constants
-        constants = _load_constants()
-        if constants is None:
-            return None
-
-        constituents = constants['constituents']
-        amp = np.array(constants['amplitude'])  # meters
-        ph = np.array(constants['phase'])       # degrees
-
-        # Time setup - pyTMD.predict.drift uses days since 1992-01-01.
         # Index 0 is the current UTC hour, and base_ts reports it.
         now = datetime.utcnow().replace(minute=0, second=0, microsecond=0)
-        epoch_1992 = datetime(1992, 1, 1, 0, 0, 0)
-        base_days = (now - epoch_1992).total_seconds() / 86400.0
         base_ts = calendar.timegm(now.timetuple())
+        epochs = base_ts + 3600 * np.arange(FORECAST_HOURS)
 
-        n = FORECAST_HOURS
-
-        # Create time array (days since 1992-01-01)
-        t = np.array([base_days + i / 24.0 for i in range(n)])
-
-        # Convert amplitude/phase to complex harmonic constants
-        # Must use -1j to match pyTMD's internal convention (see compute_tide_corrections)
-        # Shape must be (npts, nconstituents) - we have n time points, 1 spatial point
-        # pyTMD expects masked arrays
-        ph_rad = np.deg2rad(ph)
-        hc_single = amp * np.exp(-1j * ph_rad)  # (nconstituents,)
-        hc = np.ma.array(np.tile(hc_single, (n, 1)))  # (n, nconstituents) as masked array
-        hc.mask = np.zeros_like(hc, dtype=bool)  # No masked values
-
-        # Predict tides using harmonic synthesis
-        tide = pyTMD.predict.drift(
-            t,
-            hc,
-            constituents,
-            deltat=0.0,
-            corrections='FES'
-        )
+        tide = predict_tide_m(epochs)
 
         # Convert to cm and apply datum offset
         tide_cm = [int(round(float(t) * 100)) + TIDE_DATUM_OFFSET_CM for t in tide]

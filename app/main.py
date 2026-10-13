@@ -1,10 +1,11 @@
 import asyncio
 import calendar
 import logging
+import time
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 
@@ -16,6 +17,7 @@ from app.fetcher import (
     fetch_sea_temperature,
     fetch_weather,
 )
+from app.tide_schedule import MAX_DAYS, build_tide_schedule
 from app.tides import compute_tides
 
 logging.basicConfig(
@@ -137,6 +139,7 @@ async def root() -> JSONResponse:
             "has_data": cache.has_data,
             "endpoints": {
                 "conditions": "/api/conditions",
+                "tides": "/api/tides",
                 "health": "/api/health",
                 "docs": "/docs",
             },
@@ -166,6 +169,32 @@ async def get_conditions() -> JSONResponse:
             content={"error": "Data not yet available, try again shortly"},
         )
     return JSONResponse(content=response)
+
+
+@app.get("/api/tides")
+async def get_tides(
+    start: Optional[int] = Query(None, ge=946684800, le=4102444800),
+    days: int = Query(7, ge=1, le=MAX_DAYS),
+) -> JSONResponse:
+    """Return a 10-minute tide schedule with highs, lows and slack-high windows.
+
+    start is Unix epoch seconds (default: now); always computed with FES2022.
+    """
+    if start is None:
+        start = int(time.time())
+    loop = asyncio.get_event_loop()
+    try:
+        schedule = await loop.run_in_executor(None, build_tide_schedule, start, days)
+    except RuntimeError as exc:
+        logger.error("Tide schedule unavailable: %s", exc)
+        return JSONResponse(
+            status_code=503,
+            content={"error": "Tide model not available"},
+        )
+    return JSONResponse(
+        content=schedule,
+        headers={"Cache-Control": "public, max-age=3600"},
+    )
 
 
 @app.get("/api/health")

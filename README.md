@@ -68,6 +68,22 @@ Hourly arrays (168 elements) cover 7 days. `dust_daily` (5-7 elements) covers up
 }
 ```
 
+### `GET /api/tides`
+
+Tide schedule for dive planning, always from FES2022. Computed on request (no
+upstreams), so it never goes stale.
+
+| Param   | Default | Description |
+|---------|---------|-------------|
+| `start` | now     | Unix epoch seconds, floored to 10 minutes |
+| `days`  | 7       | 1-8 |
+
+| Field | Description |
+|-------|-------------|
+| `heights` | cm (chart datum) every `step` (600 s) from `start` |
+| `highs`, `lows` | `{t, h}` turning points, minute-accurate |
+| `slack_high` | `{start, peak, end, h}`: within `slack_threshold_cm` (3) of the highest level in +/-6 h, the Garmin app's slack-high rule |
+
 ### `GET /api/health`
 
 ```json
@@ -144,6 +160,7 @@ All configuration is in `app/config.py`:
 cd /var/www/dahab-api
 source venv/bin/activate
 uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+pip install pytest && python -m pytest tests   # needs the FES2022 constants
 ```
 
 ### Dependencies

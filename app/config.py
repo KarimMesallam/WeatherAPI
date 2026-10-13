@@ -69,3 +69,7 @@ TIDE_MODEL_NAME = os.environ.get("TIDE_MODEL", "FES2022")
 # (Lowest Astronomical Tide). For Dahab, the offset is ~45cm based on comparison
 # with tide-forecast.com. This shifts our values to match what divers/sailors expect.
 TIDE_DATUM_OFFSET_CM = 45
+
+# Slack high tide: within this many cm of the highest level in a +/-6 h window.
+# Same rule as the Garmin app's slack-high star.
+SLACK_HIGH_THRESHOLD_CM = 3
