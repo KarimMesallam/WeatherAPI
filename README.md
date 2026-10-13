@@ -80,7 +80,7 @@ upstreams), so it never goes stale.
 
 | Field | Description |
 |-------|-------------|
-| `heights` | cm (chart datum) every `step` (600 s) from `start` |
+| `heights` | cm (chart datum, 0.1 cm) every `step` (600 s) from `start` |
 | `highs`, `lows` | `{t, h}` turning points, minute-accurate |
 | `slack_high` | `{start, peak, end, h}`: within `slack_threshold_cm` (3) of the highest level in +/-6 h, the Garmin app's slack-high rule |
 

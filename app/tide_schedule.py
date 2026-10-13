@@ -75,7 +75,8 @@ def build_tide_schedule(start: int, days: int) -> Dict[str, Any]:
         "slack_threshold_cm": SLACK_HIGH_THRESHOLD_CM,
         "start": start,
         "step": SAMPLE_STEP_SECONDS,
-        "heights": [int(round(h)) for h in samples],
+        # 0.1 cm: whole cm makes the curve step visibly near high and low water
+        "heights": [round(float(h), 1) for h in samples],
         "highs": turning_points(heights == rolling_max),
         "lows": turning_points(heights == rolling_min),
         "slack_high": slack_high,
