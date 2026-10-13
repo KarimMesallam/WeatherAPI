@@ -1,0 +1,58 @@
+{
+  "gauge": {
+    "code": "aqab",
+    "name": "Aqaba",
+    "lat": 29.40897,
+    "lon": 34.97872
+  },
+  "source": "IOC Sea Level Station Monitoring Facility",
+  "period": {
+    "start": "2024-10",
+    "end": "2026-10",
+    "samples": 100988,
+    "days": 720.8
+  },
+  "method": "UTide robust harmonic analysis vs FES2022 spline-interpolated at the gauge",
+  "constituents": {
+    "m2": {
+      "amplitude_ratio": 1.0827,
+      "phase_shift_deg": 9.2,
+      "gauge_amplitude_m": 0.2739,
+      "gauge_amplitude_ci_m": 0.0013,
+      "gauge_phase_deg": 129.96,
+      "gauge_phase_ci_deg": 0.27,
+      "fes_amplitude_m": 0.253,
+      "fes_phase_deg": 120.76
+    },
+    "s2": {
+      "amplitude_ratio": 1.0528,
+      "phase_shift_deg": 7.44,
+      "gauge_amplitude_m": 0.0854,
+      "gauge_amplitude_ci_m": 0.0013,
+      "gauge_phase_deg": 155.07,
+      "gauge_phase_ci_deg": 0.88,
+      "fes_amplitude_m": 0.0811,
+      "fes_phase_deg": 147.62
+    },
+    "n2": {
+      "amplitude_ratio": 1.2876,
+      "phase_shift_deg": -2.35,
+      "gauge_amplitude_m": 0.0866,
+      "gauge_amplitude_ci_m": 0.0013,
+      "gauge_phase_deg": 100.22,
+      "gauge_phase_ci_deg": 0.86,
+      "fes_amplitude_m": 0.0672,
+      "fes_phase_deg": 102.57
+    },
+    "k2": {
+      "amplitude_ratio": 1.018,
+      "phase_shift_deg": -7.21,
+      "gauge_amplitude_m": 0.0261,
+      "gauge_amplitude_ci_m": 0.0013,
+      "gauge_phase_deg": 143.13,
+      "gauge_phase_ci_deg": 2.86,
+      "fes_amplitude_m": 0.0257,
+      "fes_phase_deg": 150.34
+    }
+  }
+}

@@ -65,10 +65,11 @@ HTTP_TIMEOUT_SECONDS = 30
 # Override at runtime: TIDE_MODEL=GOT4.10 to switch back
 TIDE_MODEL_NAME = os.environ.get("TIDE_MODEL", "FES2022")
 
-# Datum offset: Models output relative to MSL, but tide tables use chart datum
-# (Lowest Astronomical Tide). For Dahab, the offset is ~45cm based on comparison
-# with tide-forecast.com. This shifts our values to match what divers/sailors expect.
-TIDE_DATUM_OFFSET_CM = 45
+# Datum offset: models output heights about MSL, tide tables use chart datum
+# (Lowest Astronomical Tide). Dahab's LAT is 51 cm below MSL: the lowest level
+# of the gauge-calibrated FES2022 tide over 19 years (2026-2044). Recompute it
+# whenever app/gauge_calibration.json changes (tests check it).
+TIDE_DATUM_OFFSET_CM = 51
 
 # Slack high tide: within this many cm of the highest level in a +/-6 h window.
 # Same rule as the Garmin app's slack-high star.

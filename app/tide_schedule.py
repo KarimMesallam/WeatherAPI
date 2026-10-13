@@ -1,7 +1,7 @@
 """Minute-accurate tide schedule for dive planning.
 
 Builds 10-minute samples, highs, lows and slack-high windows from the same
-FES2022 prediction that feeds /api/conditions.
+gauge-calibrated FES2022 prediction that feeds /api/conditions.
 """
 from functools import lru_cache
 from typing import Any, Dict, List
@@ -10,7 +10,7 @@ import numpy as np
 from scipy.ndimage import maximum_filter1d, minimum_filter1d
 
 from app.config import SLACK_HIGH_THRESHOLD_CM, TIDE_DATUM_OFFSET_CM
-from app.tides_fes2022 import predict_tide_m
+from app.tides_fes2022 import calibration_source, predict_tide_m
 
 SAMPLE_STEP_SECONDS = 600
 GRID_STEP_SECONDS = 60
@@ -71,6 +71,7 @@ def build_tide_schedule(start: int, days: int) -> Dict[str, Any]:
 
     return {
         "model": "FES2022",
+        "calibration": calibration_source(),
         "datum_offset_cm": TIDE_DATUM_OFFSET_CM,
         "slack_threshold_cm": SLACK_HIGH_THRESHOLD_CM,
         "start": start,

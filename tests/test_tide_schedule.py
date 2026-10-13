@@ -1,5 +1,6 @@
 import asyncio
 import calendar
+import json
 from datetime import datetime
 from unittest import mock
 
@@ -9,6 +10,7 @@ import httpx
 
 import app.tides_fes2022 as fes
 from app import main
+from app.config import TIDE_DATUM_OFFSET_CM
 from app.tide_schedule import build_tide_schedule
 
 pytestmark = pytest.mark.skipif(
@@ -78,3 +80,23 @@ def test_tides_endpoint():
     assert response.status_code == 200
     assert response.json()["start"] == START
     assert asyncio.run(fetch({"days": 9})).status_code == 422
+
+
+def test_gauge_calibration_is_applied():
+    with open(fes.CACHE_FILE) as f:
+        raw = json.load(f)
+    with open(fes.CALIBRATION_FILE) as f:
+        corrections = json.load(f)["constituents"]
+    calibrated = fes._load_constants()
+    m2 = raw["constituents"].index("m2")
+    assert calibrated["amplitude"][m2] == pytest.approx(
+        raw["amplitude"][m2] * corrections["m2"]["amplitude_ratio"])
+    assert calibrated["phase"][m2] == pytest.approx(
+        raw["phase"][m2] + corrections["m2"]["phase_shift_deg"])
+
+
+def test_datum_is_lowest_astronomical_tide():
+    start = calendar.timegm(datetime(2026, 1, 1).timetuple())
+    epochs = start + 3600 * np.arange(19 * 8766)
+    lowest_cm = fes.predict_tide_m(epochs).min() * 100
+    assert abs(lowest_cm + TIDE_DATUM_OFFSET_CM) <= 1

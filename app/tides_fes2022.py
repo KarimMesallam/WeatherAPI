@@ -21,9 +21,35 @@ from app.config import (
 logger = logging.getLogger(__name__)
 
 CACHE_FILE = Path(TIDE_MODEL_DIR) / 'FES2022' / 'dahab_constants.json'
+CALIBRATION_FILE = Path(__file__).parent / 'gauge_calibration.json'
 
 # Cached constants (loaded on first use)
 _cached_constants = None
+
+
+def _calibrate(constants: dict) -> dict:
+    """Apply the Aqaba gauge corrections from calibrate_from_gauge.py.
+
+    FES2022 runs ~10 min early and ~8% small against the gauge; scaling each
+    main constituent's amplitude and shifting its phase removes that bias.
+    """
+    with open(CALIBRATION_FILE) as f:
+        corrections = json.load(f)['constituents']
+    amplitude = list(constants['amplitude'])
+    phase = list(constants['phase'])
+    for i, name in enumerate(constants['constituents']):
+        if name in corrections:
+            amplitude[i] *= corrections[name]['amplitude_ratio']
+            phase[i] = (phase[i] + corrections[name]['phase_shift_deg']) % 360
+    return {**constants, 'amplitude': amplitude, 'phase': phase}
+
+
+def calibration_source() -> str:
+    """Which gauge and period the calibration came from."""
+    with open(CALIBRATION_FILE) as f:
+        calibration = json.load(f)
+    period = calibration['period']
+    return f"{calibration['gauge']['name']} tide gauge, {period['start']} to {period['end']}"
 
 
 def _load_constants():
@@ -38,7 +64,7 @@ def _load_constants():
         return None
 
     with open(CACHE_FILE) as f:
-        _cached_constants = json.load(f)
+        _cached_constants = _calibrate(json.load(f))
 
     logger.info(
         "Loaded FES2022 constants: %d constituents for (%.4f, %.4f)",

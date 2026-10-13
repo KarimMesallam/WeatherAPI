@@ -45,7 +45,7 @@ Returns a single JSON object (~4.5KB) with hourly and daily forecast data. All n
 | `temp`      | `int[]`    | 168    | Air temperature in Celsius                    |
 | `dust_daily` | `int[]`   | 5-7    | Daily max Saharan dust concentration in ug/m3 (today + up to 6 days, may be absent) |
 | `sea_temp`  | `int[]`    | 168    | Sea surface temperature in Celsius (may be absent) |
-| `tide`      | `int[]`    | 168    | Tide height in centimeters relative to mean sea level (may be absent) |
+| `tide`      | `int[]`    | 168    | Tide height in centimeters above chart datum (LAT) (may be absent) |
 | `age`       | `int`      | —      | Seconds since last successful data refresh    |
 
 Hourly arrays (168 elements) cover 7 days. `dust_daily` (5-7 elements) covers up to 7 days — each value is the worst-case (maximum) dust concentration for that day, sourced from the Open-Meteo Air Quality API.
@@ -83,6 +83,20 @@ upstreams), so it never goes stale.
 | `heights` | cm (chart datum, 0.1 cm) every `step` (600 s) from `start` |
 | `highs`, `lows` | `{t, h}` turning points, minute-accurate |
 | `slack_high` | `{start, peak, end, h}`: within `slack_threshold_cm` (3) of the highest level in +/-6 h, the Garmin app's slack-high rule |
+| `calibration` | Gauge and period the FES2022 correction came from |
+
+### Tide accuracy
+
+FES2022 at the Aqaba tide gauge (IOC `aqab`) runs ~10 minutes early and ~8%
+small on the semidiurnal tide. `calibrate_from_gauge.py` measures that bias
+from two years of gauge data and writes `app/gauge_calibration.json`, which
+scales and phase-shifts Dahab's M2, S2, N2 and K2. Dahab and Aqaba share one
+co-oscillating gulf tide (1 degree of M2 phase apart in FES2022), so the
+correction carries over. Tested out of sample (calibrate on one year, score on
+the other), the median high/low timing error drops from ~11 minutes early to
+0-8 minutes and 80% of highs fall within ~17 minutes; most of what remains is
+wind and pressure. Heights are above Lowest Astronomical Tide (51 cm below
+MSL over 2026-2044); rerun the tests after recalibrating, they check the datum.
 
 ### `GET /api/health`
 
