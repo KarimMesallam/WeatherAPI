@@ -1,6 +1,7 @@
+import calendar
 import logging
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import numpy as np
 
@@ -16,14 +17,15 @@ from app.config import (
 logger = logging.getLogger(__name__)
 
 
-def compute_tides() -> Optional[List[int]]:
+def compute_tides() -> Optional[Tuple[List[int], int]]:
     """Compute hourly tide heights using the configured model.
 
     Uses TIDE_MODEL_NAME from config to select between:
     - GOT4.10: Default, lower resolution but works
     - FES2022: Higher resolution (1/30°), better for Gulf of Aqaba
 
-    Returns list of tide heights in centimeters, or None if computation fails.
+    Returns (list of tide heights in centimeters, epoch seconds of index 0),
+    or None if computation fails. Index 0 is the UTC hour the computation ran.
     """
     if TIDE_MODEL_NAME == "FES2022":
         from app.tides_fes2022 import compute_tides_fes2022
@@ -32,21 +34,21 @@ def compute_tides() -> Optional[List[int]]:
         return _compute_tides_got410()
 
 
-def _compute_tides_got410() -> Optional[List[int]]:
+def _compute_tides_got410() -> Optional[Tuple[List[int], int]]:
     """Compute hourly tide heights using GOT4.10 model.
 
-    Returns list of tide heights in centimeters, or None if computation fails.
+    Returns (tide heights in centimeters, epoch seconds of index 0), or None
+    if computation fails.
     Uses pyTMD with the GOT4.10 model and extrapolation (Red Sea is narrow,
     the model grid may not cover Dahab directly).
     """
     try:
         import pyTMD
 
-        now = datetime.utcnow()
+        now = datetime.utcnow().replace(minute=0, second=0, microsecond=0)
         epoch = datetime(2000, 1, 1, 0, 0, 0)
         base_seconds = (now - epoch).total_seconds()
-        # Round down to the current hour
-        base_seconds = (base_seconds // 3600) * 3600
+        base_ts = calendar.timegm(now.timetuple())
 
         n = FORECAST_HOURS
         delta_times = np.array(
@@ -79,7 +81,7 @@ def _compute_tides_got410() -> Optional[List[int]]:
             max(tide_cm),
             TIDE_DATUM_OFFSET_CM,
         )
-        return tide_cm
+        return tide_cm, base_ts
 
     except Exception as exc:
         logger.error("Tide computation failed: %s", exc, exc_info=True)

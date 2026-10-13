@@ -3,11 +3,12 @@
 Uses pre-extracted harmonic constants from dahab_constants.json for fast
 tide predictions. The constants are extracted once using extract_fes2022_constants.py.
 """
+import calendar
 import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import numpy as np
 
@@ -48,10 +49,12 @@ def _load_constants():
     return _cached_constants
 
 
-def compute_tides_fes2022() -> Optional[List[int]]:
+def compute_tides_fes2022() -> Optional[Tuple[List[int], int]]:
     """Compute hourly tide heights using FES2022 cached constants.
 
-    Returns list of tide heights in centimeters, or None if computation fails.
+    Returns (list of tide heights in centimeters, epoch seconds of index 0),
+    or None if computation fails. Index 0 is the UTC hour the computation
+    ran in, so consumers know the array's time base.
     Uses pre-extracted harmonic constants for fast computation.
     """
     try:
@@ -67,11 +70,12 @@ def compute_tides_fes2022() -> Optional[List[int]]:
         amp = np.array(constants['amplitude'])  # meters
         ph = np.array(constants['phase'])       # degrees
 
-        # Time setup - pyTMD.predict.drift uses days since 1992-01-01
-        now = datetime.utcnow()
+        # Time setup - pyTMD.predict.drift uses days since 1992-01-01.
+        # Index 0 is the current UTC hour, and base_ts reports it.
+        now = datetime.utcnow().replace(minute=0, second=0, microsecond=0)
         epoch_1992 = datetime(1992, 1, 1, 0, 0, 0)
         base_days = (now - epoch_1992).total_seconds() / 86400.0
-        base_days = (base_days // (1/24)) * (1/24)  # Round to hour
+        base_ts = calendar.timegm(now.timetuple())
 
         n = FORECAST_HOURS
 
@@ -106,7 +110,7 @@ def compute_tides_fes2022() -> Optional[List[int]]:
             max(tide_cm),
             TIDE_DATUM_OFFSET_CM,
         )
-        return tide_cm
+        return tide_cm, base_ts
 
     except Exception as exc:
         logger.error("FES2022 tide computation failed: %s", exc, exc_info=True)

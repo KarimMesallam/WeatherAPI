@@ -6,7 +6,7 @@ from typing import Any, Dict
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 from app.cache import CacheManager
 from app.config import BACKGROUND_CHECK_INTERVAL, TZ_OFFSET_MINUTES
@@ -50,7 +50,7 @@ async def _do_refresh() -> Dict[str, Any]:
 
     # Compute tides in a thread pool (CPU-bound)
     loop = asyncio.get_event_loop()
-    tide_data = await loop.run_in_executor(None, compute_tides)
+    tide_result = await loop.run_in_executor(None, compute_tides)
 
     # Compute Unix epoch of first forecast hour (UTC)
     # time[0] is local time like "2026-01-30T01:00", tz_offset is minutes ahead of UTC
@@ -73,8 +73,11 @@ async def _do_refresh() -> Dict[str, Any]:
     if sea_temp is not None:
         result["sea_temp"] = sea_temp
 
-    if tide_data is not None:
+    if tide_result is not None:
+        tide_data, tide_ts = tide_result
         result["tide"] = tide_data
+        # Index 0 of tide[] is this UTC hour; consumers need it to place "now"
+        result["tide_ts"] = tide_ts
 
     cache.update(result)
     logger.info("Data refresh complete")
@@ -122,6 +125,29 @@ async def startup() -> None:
 async def shutdown() -> None:
     await close_client()
     logger.info("Shutdown complete")
+
+
+@app.get("/")
+async def root() -> JSONResponse:
+    """Return a lightweight service status for browser/root checks."""
+    return JSONResponse(
+        content={
+            "name": app.title,
+            "status": "ok" if cache.has_data else "warming_up",
+            "has_data": cache.has_data,
+            "endpoints": {
+                "conditions": "/api/conditions",
+                "health": "/api/health",
+                "docs": "/docs",
+            },
+        }
+    )
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon() -> Response:
+    """Avoid browser favicon probes showing as application 404s."""
+    return Response(status_code=204)
 
 
 @app.get("/api/conditions")
