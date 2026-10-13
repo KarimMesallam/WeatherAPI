@@ -27,9 +27,10 @@ def main():
         elapsed = time.time() - start
 
         if result:
-            print(f"✓ Success: {len(result)} values in {elapsed:.2f}s")
-            print(f"  Range: {min(result)} to {max(result)} cm")
-            print(f"  First 6 hours: {result[:6]}")
+            tide, _tide_ts = result
+            print(f"✓ Success: {len(tide)} values in {elapsed:.2f}s")
+            print(f"  Range: {min(tide)} to {max(tide)} cm")
+            print(f"  First 6 hours: {tide[:6]}")
         else:
             print("✗ Computation failed - check logs")
             return 1
